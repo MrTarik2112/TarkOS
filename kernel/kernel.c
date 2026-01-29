@@ -533,7 +533,6 @@ end:
 /* ============= KERNEL MAIN ============= */
 void kmain(uint32_t magic, multiboot_info_t *mboot) {
   // Enable Interrupts explicitly
-  __asm__ volatile("sti");
 
   fs_init();
   set_color(WHITE, BLUE);
