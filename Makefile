@@ -1,4 +1,4 @@
-# TarkOS Simple Makefile
+# TarkOS v1.0 Makefile
 
 # Cross compiler
 CC = $(HOME)/opt/cross/bin/i686-elf-gcc
