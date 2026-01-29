@@ -100,14 +100,27 @@ int strcmp(const char *a, const char *b) {
   }
   return *a - *b;
 }
+int strncmp(const char *a, const char *b, int n) {
+  while (n-- && *a && *a == *b) {
+    a++;
+    b++;
+  }
+  return n < 0 ? 0 : *a - *b;
+}
 void strcpy(char *d, const char *s) {
   while ((*d++ = *s++))
     ;
 }
+void strcat(char *d, const char *s) {
+  while (*d)
+    d++;
+  while ((*d++ = *s++))
+    ;
+}
 void *memset(void *s, int c, int n) {
-  unsigned char *p = s;
+  unsigned char *p = (unsigned char *)s;
   while (n--)
-    *p++ = c;
+    *p++ = (unsigned char)c;
   return s;
 }
 
