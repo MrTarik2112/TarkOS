@@ -156,75 +156,29 @@ char scancode_to_char(uint8_t sc, bool shift) {
   return shift ? sh_map[sc] : map[sc];
 }
 
-/* ============= SNAKE GAME (FIXED) ============= */
-void game_snake() {
-  int sx[100], sy[100], len = 3, dx = 1, dy = 0, fx = 20, fy = 12, score = 0;
-  for (int i = 0; i < len; i++) {
-    sx[i] = 10 - i;
-    sy[i] = 10;
-  }
+/* ============= PATH & DIRECTORY SYSTEM ============= */
+static char current_path[64] = "/";
 
-  clear_screen();
-  set_color(14, 0); // Yellow on Black
-  print_at(2, 0, "SNAKE v1.2 - Use WASD, Q to Quit", 14, 0);
-
-  while (1) {
-    // Draw food & snake
-    put_char_at('*', 0x0C, fx, fy); // Red food
-    for (int i = 0; i < len; i++)
-      put_char_at(i == 0 ? '@' : 'o', 0x0A, sx[i], sy[i]); // Green snake
-
-    // Non-blocking input
-    uint8_t sc = get_scancode();
-    if (sc == 0x11 && dy == 0) {
-      dx = 0;
-      dy = -1;
-    } // W
-    if (sc == 0x1F && dy == 0) {
-      dx = 0;
-      dy = 1;
-    } // S
-    if (sc == 0x1E && dx == 0) {
-      dx = -1;
-      dy = 0;
-    } // A
-    if (sc == 0x20 && dx == 0) {
-      dx = 1;
-      dy = 0;
-    } // D
-    if (sc == 0x10)
-      break; // Q
-
-    sleep(80);
-
-    // Logic
-    put_char_at(' ', 0, sx[len - 1], sy[len - 1]);
-    for (int i = len - 1; i > 0; i--) {
-      sx[i] = sx[i - 1];
-      sy[i] = sy[i - 1];
+void cmd_cd(const char *arg) {
+  if (strlen(arg) == 0 || strcmp(arg, "~") == 0 || strcmp(arg, "/") == 0) {
+    strcpy(current_path, "/");
+  } else if (strcmp(arg, "..") == 0) {
+    if (strcmp(current_path, "/") != 0) {
+      // Very simple parent dir logic (just back to root for now)
+      strcpy(current_path, "/");
     }
-    sx[0] += dx;
-    sy[0] += dy;
-
-    if (sx[0] < 0 || sx[0] >= VGA_WIDTH || sy[0] < 1 || sy[0] >= VGA_HEIGHT)
-      break;
-    if (sx[0] == fx && sy[0] == fy) {
-      score += 10;
-      len++;
-      fx = rand() % VGA_WIDTH;
-      fy = (rand() % (VGA_HEIGHT - 1)) + 1;
-    }
-    for (int i = 1; i < len; i++)
-      if (sx[0] == sx[i] && sy[0] == sy[i])
-        goto over;
+  } else {
+    // Mock directory change
+    if (strlen(current_path) > 1)
+      strcat(current_path, "/");
+    strcat(current_path, arg);
   }
-over:
-  set_color(15, 1);
-  clear_screen();
-  print("Game Over! Score: ");
-  print_int(score);
-  print("\nPress any key...");
-  while (!get_scancode())
+}
+
+void strcat(char *d, const char *s) {
+  while (*d)
+    d++;
+  while ((*d++ = *s++))
     ;
 }
 
@@ -259,7 +213,7 @@ void shell_loop() {
     set_color(15, 1);
     print(":");
     set_color(9, 1);
-    print("~");
+    print(current_path);
     set_color(15, 1);
     print("$ ");
 
@@ -308,16 +262,21 @@ void shell_loop() {
     cmd[pos] = 0;
 
     // Process
-    if (strcmp(cmd, "help") == 0)
-      print("Available: help, cls, info, snake, ver, logo, reboot\n");
+    if (strncmp(cmd, "cd ", 3) == 0)
+      cmd_cd(cmd + 3);
+    else if (strcmp(cmd, "cd") == 0)
+      cmd_cd("");
+    else if (strcmp(cmd, "pwd") == 0) {
+      print(current_path);
+      print("\n");
+    } else if (strcmp(cmd, "help") == 0)
+      print("Available: cd, pwd, cls, info, ver, logo, reboot, help\n");
     else if (strcmp(cmd, "cls") == 0) {
       clear_screen();
     } else if (strcmp(cmd, "info") == 0)
       print("TarkOS v1.2 Professional\nCPU: x86\nRAM: 128MB\n");
-    else if (strcmp(cmd, "snake") == 0)
-      game_snake();
     else if (strcmp(cmd, "ver") == 0)
-      print("TarkOS Version 1.2.0 (Build: 29.01.2026)\n");
+      print("TarkOS Version 1.2.1 (Build: 29.01.2026)\n");
     else if (strcmp(cmd, "logo") == 0) {
       print("  _____            _   ____   _____\n");
       print(" |_   _|_ _ _ __| | / ___| / __  \\\n");
