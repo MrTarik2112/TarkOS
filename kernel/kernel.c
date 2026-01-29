@@ -188,13 +188,6 @@ void cmd_cd(const char *arg) {
   }
 }
 
-void strcat(char *d, const char *s) {
-  while (*d)
-    d++;
-  while ((*d++ = *s++))
-    ;
-}
-
 void put_char_at(char c, uint8_t col, int x, int y) {
   if (x >= 0 && x < VGA_WIDTH && y >= 0 && y < VGA_HEIGHT)
     vga[y * VGA_WIDTH + x] = (uint16_t)c | ((uint16_t)col << 8);
