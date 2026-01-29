@@ -35,7 +35,7 @@ $(ISO): $(KERNEL)
 	grub-mkrescue -o $@ iso
 
 run: $(ISO)
-	qemu-system-i386 -cdrom $(ISO) -m 128M -display curses
+	qemu-system-i386 -cdrom $(ISO) -m 512M -smp 3 -display curses
 
 clean:
 	rm -rf build $(ISO)
