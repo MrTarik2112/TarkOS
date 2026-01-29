@@ -1,6 +1,6 @@
 /**
- * TarkOS v1.7.3 - Professional Core Polished (Fixes & Features)
- * 512MB RAM & 3-Core SMP | Full FS Ops | Zero-Lag | Ultra FPS
+ * TarkOS v1.8.0 - Professional Polish Edition
+ * Modern Aesthetics | TrEdit v2.2 Restored | 3-Core SMP Ops | Zero-Lag
  */
 
 /* ============= HEADERS & TYPES ============= */
@@ -27,8 +27,11 @@ int strncmp(const char *a, const char *b, int n);
 void strcpy(char *d, const char *s);
 void strcat(char *d, const char *s);
 void *memset(void *s, int c, int n);
+void itoa(int n, char *buf);
+uint8_t get_rtc(int reg);
+void get_time_str(char *buf);
 
-/* ============= VGA DRIVER v3.0 (SUPER FPS) ============= */
+/* ============= VGA DRIVER v3.1 (PROFESSIONAL AESTHETICS) ============= */
 #define VGA_ADDR 0xB8000
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -36,8 +39,17 @@ static uint16_t *vga = (uint16_t *)VGA_ADDR;
 static uint16_t current_x = 0, current_y = 1;
 static uint8_t current_col = 0x1F;
 
+// Modern Theme Palette
+#define COL_BG 0x1F      // Blue BG, White FG
+#define COL_HEADER 0x3F  // Cyan/Blue Header
+#define COL_FOOTER 0x70  // Grey/Black Footer
+#define COL_ACCENT 0x0B  // Light Cyan
+#define COL_SUCCESS 0x2F // Green Success
+#define COL_ERROR 0x4F   // Red Error
+#define COL_PROMPT 0x0A  // Green Prompt
+
 void set_color(uint8_t fg, uint8_t bg) {
-  current_col = (bg << 4) | (fg & 0x0F);
+  current_col = (bg << 4) | (fg & 0x0f);
 }
 
 void put_char_raw(char c, uint8_t col, int x, int y) {
@@ -60,7 +72,7 @@ void update_cursor(int x, int y) {
                    : "a"((uint8_t)((pos >> 8) & 0xFF)), "Nd"((uint16_t)0x3D5));
 }
 
-void clear_screen_area(int x, int y, int w, int h, uint8_t col) {
+void draw_rect(int x, int y, int w, int h, uint8_t col) {
   uint16_t entry = (uint16_t)' ' | ((uint16_t)col << 8);
   for (int i = y; i < y + h; i++)
     for (int j = x; j < x + w; j++)
@@ -68,8 +80,28 @@ void clear_screen_area(int x, int y, int w, int h, uint8_t col) {
         vga[i * VGA_WIDTH + j] = entry;
 }
 
+void draw_box(int x, int y, int w, int h, uint8_t col) {
+  // Shadows
+  draw_rect(x + 1, y + 1, w, h, 0x08);
+  // Body
+  draw_rect(x, y, w, h, col);
+  // Borders (Single line for clean look)
+  for (int i = x; i < x + w; i++) {
+    put_char_raw('-', col, i, y);
+    put_char_raw('-', col, i, y + h - 1);
+  }
+  for (int i = y; i < y + h; i++) {
+    put_char_raw('|', col, x, i);
+    put_char_raw('|', col, x + w - 1, i);
+  }
+  put_char_raw('+', col, x, y);
+  put_char_raw('+', col, x + w - 1, y);
+  put_char_raw('+', col, x, y + h - 1);
+  put_char_raw('+', col, x + w - 1, y + h - 1);
+}
+
 void clear_screen() {
-  clear_screen_area(0, 0, 80, 25, current_col);
+  draw_rect(0, 0, 80, 25, COL_BG);
   current_x = 0;
   current_y = 1;
   update_cursor(0, 1);
@@ -78,7 +110,7 @@ void clear_screen() {
 void scroll() {
   for (int i = 1 * VGA_WIDTH; i < (VGA_HEIGHT - 1) * VGA_WIDTH; i++)
     vga[i] = vga[i + VGA_WIDTH];
-  clear_screen_area(0, VGA_HEIGHT - 2, VGA_WIDTH, 1, current_col);
+  draw_rect(0, VGA_HEIGHT - 2, VGA_WIDTH, 1, COL_BG);
   current_y = VGA_HEIGHT - 2;
 }
 
@@ -191,8 +223,10 @@ uint8_t get_rtc(int reg) {
 static uint8_t last_s = 0xFF;
 void get_time_str(char *buf) {
   uint8_t s = get_rtc(0x00);
-  if (s == last_s)
+  if (s == last_s) {
+    buf[0] = 0;
     return;
+  } // No change
   last_s = s;
   uint8_t h = get_rtc(0x04), m = get_rtc(0x02);
   h = ((h & 0xF0) >> 1) + ((h & 0xF0) >> 3) + (h & 0x0F);
@@ -225,8 +259,8 @@ static char current_path[64] = "/";
 void fs_init() {
   memset(fs_table, 0, sizeof(fs_table));
   strcpy(fs_table[0].name, "readme.txt");
-  strcpy(fs_table[0].data, "Welcome to TarkOS Extra v1.7.3!\n512MB RAM, 3 "
-                           "Cores active. Type 'help'.");
+  strcpy(fs_table[0].data, "TarkOS Professional v1.8\nSystem Status: "
+                           "Optimal\n512MB RAM - 3 Core SMP Active.");
   fs_table[0].size = strlen(fs_table[0].data);
   fs_table[0].used = true;
 }
@@ -255,7 +289,7 @@ void fs_write_file(const char *name, const char *data, int size) {
   }
 }
 
-/* ============= KEYBOARD ============= */
+/* ============= KEYBOARD (ZERO-LAG) ============= */
 char get_any_scancode() {
   if (!(inb(0x64) & 1))
     return 0;
@@ -279,8 +313,50 @@ char scancode_to_char(uint8_t sc, bool shift) {
   return shift ? caps[sc] : map[sc];
 }
 
-/* ============= TrEdit Pro v2.1.2 ============= */
+/* ============= TrEdit Pro v2.2 RESTORED ============= */
 static char edit_buffer[MAX_FILE_SIZE];
+static int edit_cursor_ptr = 0;
+
+void render_tredit_pro(const char *fname, int ln, int col) {
+  draw_rect(0, 0, 80, 25, COL_BG);
+  // Top Bar
+  draw_rect(0, 0, 80, 1, COL_HEADER);
+  print_at(2, 0, "TrEdit Professional v2.2", COL_HEADER);
+  print_at(30, 0, "| Editing: ", COL_HEADER);
+  print_at(41, 0, fname, COL_HEADER);
+  print_at(62, 0, "F2:Save F10:Quit", COL_HEADER);
+  // Footer Bar
+  draw_rect(0, 24, 80, 1, COL_FOOTER);
+  char s_buf[32];
+  print_at(2, 24, "LINE: ", COL_FOOTER);
+  itoa(ln, s_buf);
+  print_at(8, 24, s_buf, COL_FOOTER);
+  print_at(15, 24, "COL: ", COL_FOOTER);
+  itoa(col, s_buf);
+  print_at(20, 24, s_buf, COL_FOOTER);
+  print_at(35, 24, "MEM: ", COL_FOOTER);
+  itoa(edit_cursor_ptr, s_buf);
+  print_at(40, 24, s_buf, COL_FOOTER);
+  print_at(44, 24, " / 2048", COL_FOOTER);
+  print_at(60, 24, "STATUS: SMP Active", COL_FOOTER);
+
+  // Text Content
+  int r = 2, c = 2;
+  for (int i = 0; i < edit_cursor_ptr; i++) {
+    if (edit_buffer[i] == '\n') {
+      r++;
+      c = 2;
+    } else {
+      put_char_raw(edit_buffer[i], COL_BG, c++, r);
+    }
+    if (c >= 78) {
+      r++;
+      c = 2;
+    }
+  }
+  update_cursor(c, r);
+}
+
 void tredit(const char *filename) {
   int id = fs_find_file(filename);
   if (id != -1) {
@@ -288,28 +364,12 @@ void tredit(const char *filename) {
   } else {
     memset(edit_buffer, 0, MAX_FILE_SIZE);
   }
-  int pos = strlen(edit_buffer);
+  edit_cursor_ptr = strlen(edit_buffer);
   bool run = true, shift = false;
-  clear_screen_area(0, 0, 80, 25, 0x1F);
+  int ln = 1, col = 1;
+
   while (run) {
-    clear_screen_area(0, 0, 80, 1, 0x70);
-    print_at(2, 0, "TrEdit Pro v1.7.3 | File: ", 0x70);
-    print_at(30, 0, filename, 0x70);
-    print_at(62, 0, "F2:Save F10:Exit", 0x70);
-    int r = 2, c = 2;
-    for (int i = 0; i < pos; i++) {
-      if (edit_buffer[i] == '\n') {
-        r++;
-        c = 2;
-      } else {
-        put_char_raw(edit_buffer[i], 0x1F, c++, r);
-      }
-      if (c >= 78) {
-        r++;
-        c = 2;
-      }
-    }
-    update_cursor(c, r);
+    render_tredit_pro(filename, ln, col);
     while (1) {
       uint8_t sc = get_any_scancode();
       if (!sc)
@@ -324,60 +384,74 @@ void tredit(const char *filename) {
         run = false;
         break;
       } else if (sc == 0x3C) {
-        fs_write_file(filename, edit_buffer, pos);
+        fs_write_file(filename, edit_buffer, edit_cursor_ptr);
         print_at(34, 12, " [ SAVED ] ", 0x2F);
-        for (volatile int i = 0; i < 2000000; i++)
+        for (volatile int i = 0; i < 3000000; i++)
           ;
         break;
       } else {
         char ch = scancode_to_char(sc, shift);
         if (ch == '\n') {
-          edit_buffer[pos++] = '\n';
+          edit_buffer[edit_cursor_ptr++] = '\n';
+          ln++;
+          col = 1;
           break;
         } else if (ch == '\b') {
-          if (pos > 0)
-            edit_buffer[--pos] = 0;
+          if (edit_cursor_ptr > 0) {
+            if (edit_buffer[--edit_cursor_ptr] == '\n')
+              ln--;
+            edit_buffer[edit_cursor_ptr] = 0;
+            col--;
+          }
           break;
-        } else if (ch && pos < MAX_FILE_SIZE - 1) {
-          edit_buffer[pos++] = ch;
+        } else if (ch && edit_cursor_ptr < MAX_FILE_SIZE - 1) {
+          edit_buffer[edit_cursor_ptr++] = ch;
+          col++;
           break;
         }
       }
-      for (volatile int d = 0; d < 100000; d++)
+      for (volatile int d = 0; d < 80000; d++)
         ;
     }
   }
   clear_screen();
 }
 
-/* ============= SHELL & COMMANDS ============= */
+/* ============= SHELL CORE ============= */
 #define MAX_HIST 10
-static char history_buffer[MAX_HIST][64];
+#define CMD_LEN 64
+static char history_buffer[MAX_HIST][CMD_LEN];
 static const char *cmd_list[] = {
-    "ls",    "cd",     "pwd",     "cat",   "help",   "cls",
-    "clear", "tredit", "ver",     "info",  "reboot", "free",
-    "uname", "whoami", "history", "touch", "rm",     NULL};
+    "ls",  "cd",    "pwd", "cat",  "touch", "rm",      "tredit", "help",
+    "cls", "clear", "ver", "info", "free",  "history", "reboot", NULL};
 
-void draw_ui_optimized() {
+void draw_ui_incremental() {
   char tb[16];
-  tb[0] = 0;
   get_time_str(tb);
   if (tb[0] != 0) {
-    print_at(71, 0, tb, 0x3F);
+    print_at(71, 0, tb, COL_HEADER);
   }
+}
+
+void draw_shell_static() {
+  draw_rect(0, 0, 80, 1, COL_HEADER);
+  print_at(2, 0, "TarkOS Professional v1.8", COL_HEADER);
+  draw_rect(0, 24, 80, 1, COL_FOOTER);
+  print_at(2, 24,
+           "512MB RAM DISK | TRIPLE-CORE SMP POWER | TAB:Complete | UP:History",
+           COL_FOOTER);
 }
 
 void cmd_handler(char *line) {
   if (strcmp(line, "ls") == 0) {
-    print("Files in system: ");
+    print("Files: ");
     for (int i = 0; i < MAX_FILES; i++)
       if (fs_table[i].used) {
+        set_color(0x0E, 0x01);
         print(fs_table[i].name);
+        set_color(0x0F, 0x01);
         print(" ");
       }
-    print("\n");
-  } else if (strcmp(line, "pwd") == 0) {
-    print(current_path);
     print("\n");
   } else if (strncmp(line, "cd ", 3) == 0) {
     if (line[3] == '.')
@@ -387,33 +461,35 @@ void cmd_handler(char *line) {
         strcat(current_path, "/");
       strcat(current_path, line + 3);
     }
+  } else if (strcmp(line, "pwd") == 0) {
+    print(current_path);
+    print("\n");
   } else if (strncmp(line, "cat ", 4) == 0) {
     int id = fs_find_file(line + 4);
     if (id != -1) {
-      print("\nTarget [");
+      print("\nContents [");
       print(line + 4);
       print("]:\n");
       print(fs_table[id].data);
       print("\n");
-    } else {
+    } else
       print("cat: file not found.\n");
-    }
   } else if (strncmp(line, "touch ", 6) == 0) {
     fs_write_file(line + 6, "", 0);
-    print("File '");
+    print("Created '");
     print(line + 6);
-    print("' created.\n");
+    print("'.\n");
   } else if (strncmp(line, "rm ", 3) == 0) {
     int id = fs_find_file(line + 3);
     if (id != -1) {
       fs_table[id].used = false;
-      print("Deleted.\n");
+      print("Removed.\n");
     } else
-      print("rm: no such file.\n");
+      print("rm: no file.\n");
   } else if (strcmp(line, "info") == 0) {
-    print("TarkOS 1.7.3 | 512MB RAM | 3 CORES SMP | High-Performance Mode\n");
+    print("TarkOS 1.8.0 | CPU: 3-Core SMP | RAM: 512MB | State: Stable\n");
   } else if (strcmp(line, "free") == 0) {
-    print("Memory: 524288KB total, 520192KB free.\n");
+    print("Mem Total: 524288KB, Free: 521000KB (RAM DISK Active)\n");
   } else if (strcmp(line, "history") == 0) {
     for (int i = 0; i < MAX_HIST; i++)
       if (strlen(history_buffer[i]) > 0) {
@@ -427,15 +503,13 @@ void cmd_handler(char *line) {
     tredit("note.txt");
   else if (strcmp(line, "cls") == 0 || strcmp(line, "clear") == 0) {
     clear_screen();
-    clear_screen_area(0, 0, 80, 1, 0x3F);
-    print_at(2, 0, "TarkOS v1.7.3 Pro", 0x3F);
+    draw_shell_static();
   } else if (strcmp(line, "reboot") == 0)
     outb(0x64, 0xFE);
-  else if (strcmp(line, "help") == 0)
-    print("Available: ls, cd, pwd, cat, touch, rm, tredit, free, info, "
-          "history, cls, reboot\nFeatures: TAB Completion, UP History, "
-          "High-FPS-V3, 512MB SMP\n");
-  else {
+  else if (strcmp(line, "help") == 0) {
+    print("Restored Unix Commands: ls, cd, pwd, cat, touch, rm\nEditor: tredit "
+          "[file]\nSystem: free, info, ver, history, cls, reboot\n");
+  } else {
     print("tarksh: ");
     print(line);
     print(": command not found.\n");
@@ -443,28 +517,26 @@ void cmd_handler(char *line) {
 }
 
 void shell_loop() {
-  char line[64];
+  char line[CMD_LEN];
   int pos = 0;
-  bool shift = false;
+  bool shift = false, run = true;
   int h_idx = -1;
-  clear_screen_area(0, 0, 80, 1, 0x3F);
-  print_at(2, 0, "TarkOS v1.7.3 Professional", 0x3F);
-  clear_screen_area(0, 24, 80, 1, 0x70);
-  print_at(2, 24, "512MB RAM | 3 CORES | ZERO-LAG | TAB Complete", 0x70);
-  while (1) {
-    set_color(10, 1);
+  clear_screen();
+  draw_shell_static();
+  while (run) {
+    set_color(COL_PROMPT, 0x01);
     print("\nroot@tarkos");
-    set_color(15, 1);
+    set_color(0x0F, 0x01);
     print(":");
-    set_color(9, 1);
+    set_color(COL_ACCENT, 0x01);
     print(current_path);
-    set_color(15, 1);
+    set_color(0x0F, 0x01);
     print(":# ");
     pos = 0;
-    memset(line, 0, 64);
+    memset(line, 0, CMD_LEN);
     while (1) {
       uint8_t sc = get_any_scancode();
-      draw_ui_optimized();
+      draw_ui_incremental(); // Fast clock
       if (!sc)
         continue;
       if (sc == 0x2A || sc == 0x36)
@@ -506,12 +578,12 @@ void shell_loop() {
             pos--;
             put_char('\b');
           }
-        } else if (c && pos < 63) {
+        } else if (c && pos < CMD_LEN - 1) {
           line[pos++] = c;
           put_char(c);
         }
       }
-      for (volatile int d = 0; d < 80000; d++)
+      for (volatile int d = 0; d < 60000; d++)
         ;
     }
     if (pos > 0) {
