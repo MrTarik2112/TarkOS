@@ -13,6 +13,15 @@ typedef int bool;
 #define false 0
 #define NULL ((void *)0)
 
+/* ============= PROTOTYPES ============= */
+void clear_screen();
+void update_cursor(int x, int y);
+void put_char_raw(char c, uint8_t col, int x, int y);
+void print(const char *s);
+void print_at(int x, int y, const char *s, uint8_t col);
+void shell_loop();
+void tredit(const char *filename);
+
 /* ============= VGA DRIVER v3.0 (ULTRA FPS) ============= */
 #define VGA_ADDR 0xB8000
 #define VGA_WIDTH 80
@@ -23,7 +32,6 @@ static uint8_t cur_col = 0x1F;
 
 void set_color(uint8_t fg, uint8_t bg) { cur_col = (bg << 4) | (fg & 0x0F); }
 
-// Extreme batching: Only write if changed
 void put_char_raw(char c, uint8_t col, int x, int y) {
   if (x >= 0 && x < VGA_WIDTH && y >= 0 && y < VGA_HEIGHT) {
     uint16_t entry = (uint16_t)c | ((uint16_t)col << 8);
@@ -50,6 +58,13 @@ void clear_screen_area(int x, int y, int w, int h, uint8_t col) {
     for (int j = x; j < x + w; j++)
       if (vga[i * VGA_WIDTH + j] != entry)
         vga[i * VGA_WIDTH + j] = entry;
+}
+
+void clear_screen() {
+  clear_screen_area(0, 0, 80, 25, cur_col);
+  cur_x = 0;
+  cur_y = 1;
+  update_cursor(0, 1);
 }
 
 void scroll() {
@@ -320,7 +335,7 @@ void tredit(const char *filename) {
           break;
         }
       }
-      for (volatile int d = 0; d < 100000; d++)
+      for (volatile int d = 0; d < 50000; d++)
         ;
     }
   }
@@ -328,7 +343,7 @@ void tredit(const char *filename) {
 
 /* ============= SHELL & COMMAND DISPATCHER ============= */
 #define MAX_HIST 10
-static char history[MAX_HIST][64];
+static char history_buf[MAX_HIST][64];
 static const char *cmd_list[] = {
     "ls",     "cd",   "pwd",  "cat",    "help",    "cls",    "clear",
     "tredit", "ver",  "info", "reboot", "free",    "uname",  "whoami",
@@ -384,7 +399,6 @@ void cmd_handler(char *line) {
     tredit("newfile.txt");
   else if (strcmp(line, "cls") == 0 || strcmp(line, "clear") == 0) {
     clear_screen();
-    print_at(0, 0, "", 0);
     draw_rect(0, 0, 80, 1, 0x3F);
     print_at(2, 0, "TarkOS v1.7 X-Treme", 0x3F);
   } else if (strcmp(line, "reboot") == 0)
@@ -469,6 +483,13 @@ void shell_loop() {
       cmd_handler(line);
     }
   }
+}
+
+// Simple rand mock
+uint32_t rand() {
+  static uint32_t s = 123;
+  s = s * 1103515245 + 12345;
+  return (s / 65536) % 32768;
 }
 
 /* ============= KERNEL MAIN ============= */
