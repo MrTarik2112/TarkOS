@@ -24,7 +24,7 @@ stack_top:
 
 section .text
 global _start
-extern kernel_main
+extern kmain
 
 _start:
     ; Set up stack
@@ -35,7 +35,7 @@ _start:
     popf
     
     ; Call kernel
-    call kernel_main
+    call kmain
     
     ; Halt
 .hang:
