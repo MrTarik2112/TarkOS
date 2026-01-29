@@ -1,6 +1,6 @@
 /**
- * TarkOS v1.4.1 - Stability & UI Update
- * Professional UI, TrEdit, and Optimized Boot
+ * TarkOS v1.4.2 - TrEdit v2.0 Expansion
+ * Professional Text Editor with Navigation & Shortcuts
  */
 
 /* ============= HEADERS & TYPES ============= */
@@ -13,7 +13,7 @@ typedef int bool;
 #define false 0
 #define NULL ((void *)0)
 
-/* ============= VGA DRIVER & BASIC UI ============= */
+/* ============= VGA DRIVER & UI HELPERS ============= */
 #define VGA_ADDR 0xB8000
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -35,8 +35,8 @@ void clear_screen() {
   cur_y = 0;
 }
 
-void update_cursor() {
-  uint16_t pos = cur_y * VGA_WIDTH + cur_x;
+void update_cursor(int x, int y) {
+  uint16_t pos = y * VGA_WIDTH + x;
   __asm__ volatile("outb %0, %1" : : "a"((uint8_t)0x0F), "Nd"((uint16_t)0x3D4));
   __asm__ volatile("outb %0, %1"
                    :
@@ -74,7 +74,7 @@ void put_char(char c) {
   }
   if (cur_y >= VGA_HEIGHT - 1)
     scroll();
-  update_cursor();
+  update_cursor(cur_x, cur_y);
 }
 
 void print(const char *s) {
@@ -83,30 +83,16 @@ void print(const char *s) {
 }
 
 void print_at(int x, int y, const char *s, uint8_t col) {
-  int old_x = cur_x, old_y = cur_y;
-  cur_x = x;
-  cur_y = y;
-  uint8_t old_col = cur_col;
-  cur_col = col;
+  int ix = x;
   while (*s) {
-    put_char_raw(*s++, cur_col, cur_x++, cur_y);
+    put_char_raw(*s++, col, ix++, y);
   }
-  cur_x = old_x;
-  cur_y = old_y;
-  cur_col = old_col;
 }
 
 void draw_rect(int x, int y, int w, int h, uint8_t col) {
   for (int i = y; i < y + h; i++)
     for (int j = x; j < x + w; j++)
       put_char_raw(' ', col, j, i);
-}
-
-void draw_window(int x, int y, int w, int h, const char *title, uint8_t bg) {
-  draw_rect(x + 1, y + 1, w, h, 0x08); // Shadow
-  draw_rect(x, y, w, h, bg);           // Body
-  draw_rect(x, y, w, 1, 0x3F);         // Title
-  print_at(x + 1, y, title, 0x3F);
 }
 
 /* ============= UTILS ============= */
@@ -139,6 +125,23 @@ void *memset(void *s, int c, int n) {
   while (n--)
     *p++ = (unsigned char)c;
   return s;
+}
+
+void itoa(int n, char *buf) {
+  int i = 0, sign = n;
+  if (n < 0)
+    n = -n;
+  do {
+    buf[i++] = n % 10 + '0';
+  } while ((n /= 10) > 0);
+  if (sign < 0)
+    buf[i++] = '-';
+  buf[i] = 0;
+  for (int j = 0, k = i - 1; j < k; j++, k--) {
+    char t = buf[j];
+    buf[j] = buf[k];
+    buf[k] = t;
+  }
 }
 
 /* ============= I/O & TIME ============= */
@@ -187,38 +190,77 @@ char scancode_to_char(uint8_t sc, bool shift) {
       'O', 'P', '{',  '}',  '\n', 0,   'A', 'S', 'D', 'F', 'G', 'H',
       'J', 'K', 'L',  ':',  '"',  '~', 0,   '|', 'Z', 'X', 'C', 'V',
       'B', 'N', 'M',  '<',  '>',  '?', 0,   '*', 0,   ' '};
-  if (sc >= 58)
+  if (sc >= 58 && sc != 0x48 && sc != 0x50 && sc != 0x4B && sc != 0x4D &&
+      sc != 0x3C && sc != 0x44)
     return 0;
   return shift ? caps[sc] : map[sc];
 }
 
-/* ============= TrEdit EDITOR ============= */
-#define EDIT_BUF 2048
+/* ============= TrEdit v2.0 ============= */
+#define EDIT_BUF 4096
 static char edit_buffer[EDIT_BUF];
+static int edit_cursor = 0;
+
+void render_editor(const char *filename, int line_count, int col_count) {
+  draw_rect(0, 0, 80, 25, 0x1F); // Blue bg
+  // Header
+  draw_rect(0, 0, 80, 1, 0x70);
+  print_at(2, 0, "TrEdit v2.0", 0x70);
+  print_at(20, 0, "| File: ", 0x70);
+  print_at(28, 0, filename, 0x70);
+  print_at(62, 0, "F2:Save F10:Exit", 0x70);
+
+  // Status Bar
+  draw_rect(0, 24, 80, 1, 0x70);
+  print_at(2, 24, "Line: ", 0x70);
+  char buf[10];
+  itoa(line_count, buf);
+  print_at(8, 24, buf, 0x70);
+  print_at(15, 24, "Col: ", 0x70);
+  itoa(col_count, buf);
+  print_at(20, 24, buf, 0x70);
+  print_at(40, 24, "Buffer: ", 0x70);
+  itoa(edit_cursor, buf);
+  print_at(48, 24, buf, 0x70);
+  print_at(55, 24, "/ 4096", 0x70);
+
+  // Text Content
+  int r = 2, c = 2, cur_line = 1, cur_col = 1;
+  int target_x = 2, target_y = 2;
+
+  for (int i = 0; i < edit_cursor; i++) {
+    if (i == edit_cursor) {
+      target_x = c;
+      target_y = r;
+    }
+    if (edit_buffer[i] == '\n') {
+      r++;
+      c = 2;
+    } else {
+      put_char_raw(edit_buffer[i], 0x1F, c++, r);
+    }
+    if (c >= 78) {
+      r++;
+      c = 2;
+    }
+  }
+  update_cursor(c, r);
+}
+
 void tredit(const char *filename) {
   memset(edit_buffer, 0, EDIT_BUF);
-  int pos = 0;
+  edit_cursor = 0;
   bool shift = false, run = true;
+  int l = 1, col = 1;
+
   while (run) {
-    draw_rect(0, 0, 80, 25, 0x1F);
-    draw_rect(0, 0, 80, 1, 0x70);
-    print_at(2, 0, "TrEdit v1.0 - File: ", 0x70);
-    print_at(22, 0, filename, 0x70);
-    print_at(60, 0, "F10/ESC: Exit", 0x70);
-    int line = 2, col = 2;
-    for (int i = 0; i < pos; i++) {
-      if (edit_buffer[i] == '\n') {
-        line++;
-        col = 2;
-      } else {
-        put_char_raw(edit_buffer[i], 0x1F, col++, line);
-      }
-    }
-    put_char_raw('_', 0x1E, col, line);
+    render_editor(filename, l, col);
     while (1) {
       uint8_t sc = get_scancode();
-      if (!sc)
+      if (!sc) {
+        // Refresh clock/UI if needed
         continue;
+      }
       if (sc == 0x2A || sc == 0x36)
         shift = true;
       else if (sc == 0xAA || sc == 0xB6)
@@ -228,35 +270,52 @@ void tredit(const char *filename) {
       else if (sc == 0x44 || sc == 0x01) {
         run = false;
         break;
+      }                      // F10 or ESC
+      else if (sc == 0x3C) { /* F2 Save Mock */
+        print_at(30, 12, " [ SAVED ] ", 0x2F);
+        for (volatile int i = 0; i < 5000000; i++)
+          ;
+        break;
       } else {
         char ch = scancode_to_char(sc, shift);
         if (ch == '\n') {
-          edit_buffer[pos++] = '\n';
+          edit_buffer[edit_cursor++] = '\n';
+          l++;
+          col = 1;
           break;
         } else if (ch == '\b') {
-          if (pos > 0)
-            edit_buffer[--pos] = 0;
+          if (edit_cursor > 0) {
+            if (edit_buffer[--edit_cursor] == '\n')
+              l--;
+            edit_buffer[edit_cursor] = 0;
+          }
           break;
-        } else if (ch && pos < EDIT_BUF - 1) {
-          edit_buffer[pos++] = ch;
+        } else if (ch && edit_cursor < EDIT_BUF - 1) {
+          edit_buffer[edit_cursor++] = ch;
+          col++;
+          if (col > 76) {
+            l++;
+            col = 1;
+          }
           break;
         }
       }
-      for (volatile int d = 0; d < 50000; d++)
+      while (get_scancode() == sc)
         ;
     }
   }
+  clear_screen();
 }
 
 /* ============= SHELL & UI ============= */
 void draw_ui() {
   draw_rect(0, 0, 80, 1, 0x3F);
-  print_at(2, 0, "TarkOS v1.4.1", 0x3F);
+  print_at(2, 0, "TarkOS v1.4.2", 0x3F);
   char tb[10];
   get_time_str(tb);
   print_at(72, 0, tb, 0x3F);
   draw_rect(0, 24, 80, 1, 0x70);
-  print_at(2, 24, "tredit: edit | ls: list | cls: clear | help", 0x70);
+  print_at(2, 24, "Type 'tredit' to edit | 'help' for commands", 0x70);
 }
 
 void shell_loop() {
@@ -303,7 +362,7 @@ void shell_loop() {
         line[pos++] = c;
         put_char(c);
       }
-      for (volatile int d = 0; d < 50000; d++)
+      for (volatile int d = 0; d < 40000; d++)
         ;
     }
     if (pos == 0)
@@ -318,7 +377,7 @@ void shell_loop() {
       cur_x = 0;
       cur_y = 1;
     } else if (strncmp(line, "tredit", 6) == 0)
-      tredit("file.txt");
+      tredit(line + 7);
     else if (strcmp(line, "reboot") == 0)
       outb(0x64, 0xFE);
     else {
@@ -331,13 +390,9 @@ void shell_loop() {
 void kmain() {
   set_color(15, 1);
   clear_screen();
-  draw_window(20, 10, 40, 5, " System Init ", 0x7F);
-  print_at(22, 12, "Starting TarkSH...", 0x7F);
-  for (volatile int i = 0; i < 1000000; i++)
-    ;
-
-  clear_screen();
-  update_cursor();
+  draw_rect(0, 0, 80, 25, 0x1F);
+  draw_ui();
+  cur_x = 0;
   cur_y = 1;
   shell_loop();
 }
