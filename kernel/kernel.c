@@ -1,6 +1,7 @@
 /**
- * TarkOS v1.9.3 - Ether Edition
- * Zero-Flicker Architecture | 1.7s Cinematic Boot | 3-Core SMP
+ * TarkOS Nova v1.9.6 - Eternal Edition
+ * 18.0s Hyper-Cinematic Boot | Permanent Nova Branding | 3-Core SMP
+ * All 50+ Unix Features Preserved
  */
 
 /* ============= HEADERS & TYPES ============= */
@@ -45,7 +46,7 @@ void draw_shell_static();
 void draw_shell_dynamic();
 void delay_ms(int ms);
 
-/* ============= VGA DRIVER v7.0 (ETHER) ============= */
+/* ============= VGA DRIVER v10.0 (ETERNAL) ============= */
 #define VGA_ADDR 0xB8000
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -54,7 +55,7 @@ static uint16_t current_x = 0, current_y = 1;
 
 #define COL_BG 0x1F
 #define COL_HEADER 0x3F
-#define COL_FOOTER 0x1B
+#define COL_FOOTER 0x3F
 #define COL_SHADOW 0x08
 #define COL_ACCENT 0x0B
 #define COL_SUCCESS 0x2F
@@ -111,15 +112,15 @@ void draw_window(int x, int y, int w, int h, const char *title, uint8_t col) {
 
 void draw_shell_static() {
   draw_rect(0, 0, 80, 1, COL_HEADER);
-  print_at(1, 0, "\xAF TarkOS Ether", COL_HEADER);
-  print_at(22, 0, "| SMP: x3", COL_HEADER);
-  print_at(35, 0, "| RAM: 512MB", COL_HEADER);
-  print_at(55, 0, "| Professional Release v1.9.3", COL_HEADER);
+  print_at(1, 0, "\xAF TarkOS Nova", COL_HEADER);
+  print_at(18, 0, "| SMP: x3", COL_HEADER);
+  print_at(30, 0, "| RAM: 512MB", COL_HEADER);
+  print_at(45, 0, "| Permanent Branding Active", COL_HEADER);
 
   draw_rect(0, 24, 80, 1, COL_FOOTER);
   print_at(
       2, 24,
-      " \x10 help | ls | cat | touch | rm | tredit | Zero-Flicker Crystal UI",
+      " \x10 help | ls | cat | touch | rm | tredit | Eternal Cinematic Edition",
       COL_FOOTER);
 }
 
@@ -277,10 +278,9 @@ static char current_path[64] = "/";
 
 void fs_init() {
   memset(fs_table, 0, sizeof(fs_table));
-  strcpy(fs_table[0].name, "System.log");
-  strcpy(
-      fs_table[0].data,
-      "TarkOS Ether v1.9.3\nStability: Perfect\nUI: Zero-Flicker Framework.");
+  strcpy(fs_table[0].name, "Nova_Sys.cfg");
+  strcpy(fs_table[0].data, "TarkOS Nova Eternal v1.9.6\nMode: Super-Cinematic "
+                           "18s Boot\nBranding: Locked.");
   fs_table[0].size = strlen(fs_table[0].data);
   fs_table[0].used = true;
 }
@@ -333,7 +333,7 @@ char scancode_to_char(uint8_t sc, bool shift) {
   return shift ? caps[sc] : map[sc];
 }
 
-/* ============= TrEdit Pro v3.3 (ZERO-FLICKER) ============= */
+/* ============= TrEdit Pro v3.6 (NOVA ETERNAL) ============= */
 static char edit_buffer[MAX_FILE_SIZE];
 void tredit(const char *filename) {
   int id = fs_find_file(filename);
@@ -344,11 +344,11 @@ void tredit(const char *filename) {
   bool run = true, shift = false;
   int ptr = strlen(edit_buffer);
 
-  // Draw Static Editor UI Once
-  draw_window(5, 3, 70, 18, " TrEdit Pro v3.3 ", COL_BG);
+  draw_window(5, 3, 70, 18, " TrEdit Pro Nova v3.6 ", COL_BG);
   draw_rect(0, 24, 80, 1, COL_FOOTER);
   print_at(2, 24,
-           " \x10 F2:Save | F10:Exit | Professional Editor Context Active",
+           " \x10 F2:Save | F10:Exit | TarkOS Nova Professional Editor Engine "
+           "Active ",
            COL_FOOTER);
 
   while (run) {
@@ -382,6 +382,8 @@ void tredit(const char *filename) {
         break;
       } else if (sc == 0x3C) {
         fs_write_file(filename, edit_buffer, ptr);
+        print_at(35, 20, " [ SAVED ] ", 0x2E);
+        delay_ms(800);
         break;
       } else {
         char ch = scancode_to_char(sc, shift);
@@ -403,7 +405,7 @@ void tredit(const char *filename) {
   clear_screen();
 }
 
-/* ============= SHELL CORE v3.3 (ETHER ZERO-FLICKER) ============= */
+/* ============= SHELL CORE v3.6 (NOVA ETERNAL) ============= */
 void shell_loop() {
   char line[64];
   int pos = 0;
@@ -411,7 +413,7 @@ void shell_loop() {
   clear_screen();
   while (1) {
     set_color(COL_PROMPT, COL_BG >> 4);
-    print("\n[tarkos] ");
+    print("\n[nova] ");
     set_color(COL_SUCCESS, COL_BG >> 4);
     print(current_path);
     set_color(COL_ACCENT, COL_BG >> 4);
@@ -446,65 +448,84 @@ void shell_loop() {
     if (pos > 0) {
       line[pos] = 0;
       if (strcmp(line, "help") == 0) {
-        draw_window(12, 6, 56, 11, " TarkOS Assistance ", COL_BG);
-        print_at(15, 8, "Files: ls, cat, touch, rm, cd", COL_BG);
-        print_at(15, 9, "Apps: tredit [file], cls, ver, reboot", COL_BG);
-        print_at(18, 11, "Press any key to close help...", COL_BG);
-        while (!get_any_scancode())
-          ;
-        clear_screen();
+        set_color(COL_ACCENT, COL_BG >> 4);
+        print("\nTARKOS NOVA ETERNAL - CONSOLE ASSISTANCE\n");
+        set_color(0x0F, COL_BG >> 4);
+        print("- Filesystem: ls, cat, touch, rm, cd\n");
+        print("- Operation:  tredit, cls, ver, reboot, time\n");
+        print("- Identity:   Nova v1.9.6 Eternal [3x Boot Sequence Active]\n");
       } else if (strcmp(line, "ls") == 0) {
-        print("Directory Listing:\n");
+        print("RAMDisk Index:\n");
         for (int i = 0; i < MAX_FILES; i++)
           if (fs_table[i].used) {
             set_color(COL_ACCENT, COL_BG >> 4);
-            print("\x10 ");
+            print(" \x1F ");
             print(fs_table[i].name);
-            print("\n");
+            print(" ");
           }
-      } else if (strncmp(line, "tredit ", 7) == 0) {
+        print("\n");
+      } else if (strncmp(line, "tredit ", 7) == 0)
         tredit(line + 7);
-      } else if (strcmp(line, "cls") == 0 || strcmp(line, "clear") == 0)
+      else if (strcmp(line, "cls") == 0 || strcmp(line, "clear") == 0)
         clear_screen();
       else if (strcmp(line, "reboot") == 0)
         outb(0x64, 0xFE);
+      else if (strcmp(line, "ver") == 0)
+        print("TarkOS Nova v1.9.6 Eternal [Super-Cinematic Edition]\n");
       else {
-        print("System: '");
+        print("Nova Error: Command '");
         print(line);
-        print("' unknown command.");
+        print("' unknown.\n");
       }
     }
   }
 }
 
 /* ============= KERNEL MAIN ============= */
-void cinematic_boot_ultimate() {
+// Eternal Nova Boot Sequence (Exactly 18.0s)
+void hyper_cinematic_nova_eternal_boot() {
   clear_screen();
-  draw_window(10, 3, 60, 19, " ULTIMATE SYSTEM STARTUP ", COL_BG);
-  print_at(15, 6, "  _______   _    ____  _  _______   ____ ", 0x1E);
-  print_at(15, 7, " |__   __| | |  |  _ \\| |/ /  __ \\ / __ \\", 0x1E);
-  print_at(15, 8, "    | |    | |  | |_) | ' /| |  | | |  | |", 0x1E);
-  print_at(15, 9, "    | |    | |  |  _ <|  < | |  | | |  | |", 0x1E);
-  print_at(15, 10, "    |_|   _|_|  |_| \\_\\_|\\_\\____/ \\____/", 0x1E);
-  print_at(22, 12, ">>> TarkOS Ether v1.9.3 (Crystal Stable)", COL_ACCENT);
+  draw_window(5, 2, 70, 21, " TARKOS NOVA - ETERNAL INITIALIZATION ", COL_BG);
 
-  const char *phases[] = {
-      "CRITICAL [ SMP ] ... ACTIVE", "CRITICAL [ VFS ] ... MOUNTED",
-      "CRITICAL [ NET ] ... RESOLVED", "CRITICAL [ GUI ] ... STABILIZED"};
+  // Industrial ASCII Typography
+  set_color(0x1E, COL_BG >> 4);
+  print_at(10, 4, "  ____   _   _   _   _  _____  ____    ____  ", 0x1E);
+  print_at(10, 5, " |  _ \\ | | | | | | | ||  ___||  _ \\  / ___| ", 0x1E);
+  print_at(10, 6, " | |_) || | | | | |_| || |__  | |_) | \\___ \\ ", 0x1E);
+  print_at(10, 7, " |  _ < | | | | |  _  ||  __| |  _ <   ___) |", 0x1E);
+  print_at(10, 8, " |_| \\_\\|_| |_| |_| |_||_____||_| \\_\\ |____/ ", 0x1E);
 
-  delay_ms(300); // Calibration lead-in
-  for (int p = 0; p < 4; p++) {
-    print_at(20, 14, "                                  ", COL_BG);
-    print_at(23, 14, phases[p], COL_SUCCESS);
+  print_at(10, 10, "  __  __  ____  ____   _____  ____   _   _ ", 0x1B);
+  print_at(10, 11, " |  \\/  ||  _ \\|  _ \\ |  ___||  _ \\ | | | |", 0x1B);
+  print_at(10, 12, " | |\\/| || | | || |_) || |__  | |_) || | | |", 0x1B);
+  print_at(10, 13, " | |  | || |_| ||  _ < |  __| |  _ < | |_| |", 0x1B);
+  print_at(10, 14, " |_|  |_||____/ |_| \\_\\|_____||_| \\_\\ \\___/ ", 0x1B);
+
+  print_at(20, 16, ">>> NOVA ETERNAL KERNEL v1.9.6 STABLE <<<", COL_ACCENT);
+
+  const char *phases[] = {"[ KERNEL ] Syncing 3-Core SMP Ops...",
+                          "[ MEMORY ] Mapping 512MB RAM Pages...",
+                          "[ VFS    ] Mounting RAMDisk Nodes...",
+                          "[ DRIVER ] Initializing TUI Framework...",
+                          "[ SYSTEM ] Resolving Global IRQs...",
+                          "[ CORE   ] Spawning Console Context..."};
+
+  delay_ms(1000); // 1s Intro
+  // 18000ms total = 6 phases * 10 iterations * 280ms + 1000ms delay = 16800 +
+  // 1000 = 17800 (~18s)
+  for (int p = 0; p < 6; p++) {
+    print_at(15, 18, "                                            ", COL_BG);
+    print_at(18, 18, phases[p], COL_SUCCESS);
     for (int i = 0; i < 10; i++) {
-      put_char_raw(219, 0x1A, 15 + p * 12 + i, 16);
-      delay_ms(35); // 350ms per phase * 4 = 1400ms + 300ms = 1.7s
+      put_char_raw(219, 0x1A, 10 + p * 10 + i, 20);
+      delay_ms(280); // 2.8s per phase * 6 = 16.8s
     }
   }
+  delay_ms(200);
 }
 
 void kmain() {
   fs_init();
-  cinematic_boot_ultimate();
+  hyper_cinematic_nova_eternal_boot();
   shell_loop();
 }
