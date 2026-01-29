@@ -35,7 +35,11 @@ $(ISO): $(KERNEL)
 	grub-mkrescue -o $@ iso
 
 run: $(ISO)
-	qemu-system-i386 -cdrom $(ISO) -m 512M -smp 3 -display curses
+	@echo "Attempting to run TarkOS v1.8..."
+	qemu-system-i386 -cdrom $(ISO) -m 512M -smp 3 -vga std -display gtk || \
+	qemu-system-i386 -cdrom $(ISO) -m 512M -smp 3 -vga std -display sdl || \
+	qemu-system-i386 -cdrom $(ISO) -m 512M -smp 3 -vga std -display curses || \
+	qemu-system-i386 -cdrom $(ISO) -m 512M -smp 3 -vga std
 
 clean:
 	rm -rf build $(ISO)
