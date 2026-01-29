@@ -1,7 +1,6 @@
 /**
- * TarkOS v1.7.2 - X-Treme Professional Edition (Stable)
- * 512MB RAM & 3-Core SMP | Robust Command Set | Persistent FS | Ultra-Low
- * Latency
+ * TarkOS v1.7.3 - Professional Core Polished (Fixes & Features)
+ * 512MB RAM & 3-Core SMP | Full FS Ops | Zero-Lag | Ultra FPS
  */
 
 /* ============= HEADERS & TYPES ============= */
@@ -175,12 +174,6 @@ void itoa(int n, char *buf) {
   }
 }
 
-uint32_t t_rand() {
-  static uint32_t s = 42;
-  s = s * 1103515245 + 12345;
-  return (s / 65536) % 32768;
-}
-
 /* ============= I/O & TIME ============= */
 static inline uint8_t inb(uint16_t port) {
   uint8_t r;
@@ -232,8 +225,8 @@ static char current_path[64] = "/";
 void fs_init() {
   memset(fs_table, 0, sizeof(fs_table));
   strcpy(fs_table[0].name, "readme.txt");
-  strcpy(fs_table[0].data,
-         "Welcome to TarkOS Extra v1.7.2!\n512MB RAM, 3 Cores active.");
+  strcpy(fs_table[0].data, "Welcome to TarkOS Extra v1.7.3!\n512MB RAM, 3 "
+                           "Cores active. Type 'help'.");
   fs_table[0].size = strlen(fs_table[0].data);
   fs_table[0].used = true;
 }
@@ -243,6 +236,23 @@ int fs_find_file(const char *name) {
     if (fs_table[i].used && strcmp(fs_table[i].name, name) == 0)
       return i;
   return -1;
+}
+
+void fs_write_file(const char *name, const char *data, int size) {
+  int id = fs_find_file(name);
+  if (id == -1) {
+    for (int i = 0; i < MAX_FILES; i++)
+      if (!fs_table[i].used) {
+        id = i;
+        break;
+      }
+  }
+  if (id != -1) {
+    strcpy(fs_table[id].name, name);
+    strcpy(fs_table[id].data, data);
+    fs_table[id].size = size;
+    fs_table[id].used = true;
+  }
 }
 
 /* ============= KEYBOARD ============= */
@@ -283,7 +293,7 @@ void tredit(const char *filename) {
   clear_screen_area(0, 0, 80, 25, 0x1F);
   while (run) {
     clear_screen_area(0, 0, 80, 1, 0x70);
-    print_at(2, 0, "TrEdit Pro v1.7.2 | File: ", 0x70);
+    print_at(2, 0, "TrEdit Pro v1.7.3 | File: ", 0x70);
     print_at(30, 0, filename, 0x70);
     print_at(62, 0, "F2:Save F10:Exit", 0x70);
     int r = 2, c = 2;
@@ -310,10 +320,11 @@ void tredit(const char *filename) {
         shift = false;
       if (sc & 0x80)
         continue;
-      if (sc == 0x44 || sc == 0x01) {
+      if (sc == 0x01 || sc == 0x44) {
         run = false;
         break;
-      } else if (sc == 0x3C) { /* F2 Save */
+      } else if (sc == 0x3C) {
+        fs_write_file(filename, edit_buffer, pos);
         print_at(34, 12, " [ SAVED ] ", 0x2F);
         for (volatile int i = 0; i < 2000000; i++)
           ;
@@ -343,8 +354,9 @@ void tredit(const char *filename) {
 #define MAX_HIST 10
 static char history_buffer[MAX_HIST][64];
 static const char *cmd_list[] = {
-    "ls",  "cd",   "pwd",    "cat",  "help",  "cls",    "clear", "tredit",
-    "ver", "info", "reboot", "free", "uname", "whoami", "top",   NULL};
+    "ls",    "cd",     "pwd",     "cat",   "help",   "cls",
+    "clear", "tredit", "ver",     "info",  "reboot", "free",
+    "uname", "whoami", "history", "touch", "rm",     NULL};
 
 void draw_ui_optimized() {
   char tb[16];
@@ -357,7 +369,7 @@ void draw_ui_optimized() {
 
 void cmd_handler(char *line) {
   if (strcmp(line, "ls") == 0) {
-    print("Files: ");
+    print("Files in system: ");
     for (int i = 0; i < MAX_FILES; i++)
       if (fs_table[i].used) {
         print(fs_table[i].name);
@@ -370,12 +382,45 @@ void cmd_handler(char *line) {
   } else if (strncmp(line, "cd ", 3) == 0) {
     if (line[3] == '.')
       strcpy(current_path, "/");
-    else
+    else {
+      if (strlen(current_path) > 1)
+        strcat(current_path, "/");
       strcat(current_path, line + 3);
+    }
+  } else if (strncmp(line, "cat ", 4) == 0) {
+    int id = fs_find_file(line + 4);
+    if (id != -1) {
+      print("\nTarget [");
+      print(line + 4);
+      print("]:\n");
+      print(fs_table[id].data);
+      print("\n");
+    } else {
+      print("cat: file not found.\n");
+    }
+  } else if (strncmp(line, "touch ", 6) == 0) {
+    fs_write_file(line + 6, "", 0);
+    print("File '");
+    print(line + 6);
+    print("' created.\n");
+  } else if (strncmp(line, "rm ", 3) == 0) {
+    int id = fs_find_file(line + 3);
+    if (id != -1) {
+      fs_table[id].used = false;
+      print("Deleted.\n");
+    } else
+      print("rm: no such file.\n");
   } else if (strcmp(line, "info") == 0) {
-    print("TarkOS 1.7.2 | 512MB RAM | 3 CORES | Stable Pro Edition\n");
+    print("TarkOS 1.7.3 | 512MB RAM | 3 CORES SMP | High-Performance Mode\n");
   } else if (strcmp(line, "free") == 0) {
-    print("Mem: 524288KB total, 520192KB free\n");
+    print("Memory: 524288KB total, 520192KB free.\n");
+  } else if (strcmp(line, "history") == 0) {
+    for (int i = 0; i < MAX_HIST; i++)
+      if (strlen(history_buffer[i]) > 0) {
+        print(" ");
+        print(history_buffer[i]);
+        print("\n");
+      }
   } else if (strncmp(line, "tredit ", 7) == 0)
     tredit(line + 7);
   else if (strcmp(line, "tredit") == 0)
@@ -383,16 +428,17 @@ void cmd_handler(char *line) {
   else if (strcmp(line, "cls") == 0 || strcmp(line, "clear") == 0) {
     clear_screen();
     clear_screen_area(0, 0, 80, 1, 0x3F);
-    print_at(2, 0, "TarkOS v1.7.2 Pro", 0x3F);
+    print_at(2, 0, "TarkOS v1.7.3 Pro", 0x3F);
   } else if (strcmp(line, "reboot") == 0)
     outb(0x64, 0xFE);
   else if (strcmp(line, "help") == 0)
-    print("Available: ls, cd, pwd, cat, tredit, free, info, ver, cls, "
-          "reboot\nFeatures: TAB Completion, UP History, 512MB SMP Mode\n");
+    print("Available: ls, cd, pwd, cat, touch, rm, tredit, free, info, "
+          "history, cls, reboot\nFeatures: TAB Completion, UP History, "
+          "High-FPS-V3, 512MB SMP\n");
   else {
     print("tarksh: ");
     print(line);
-    print(": command found in system bin.\n[OK]\n");
+    print(": command not found.\n");
   }
 }
 
@@ -402,9 +448,9 @@ void shell_loop() {
   bool shift = false;
   int h_idx = -1;
   clear_screen_area(0, 0, 80, 1, 0x3F);
-  print_at(2, 0, "TarkOS v1.7.2 Professional", 0x3F);
+  print_at(2, 0, "TarkOS v1.7.3 Professional", 0x3F);
   clear_screen_area(0, 24, 80, 1, 0x70);
-  print_at(2, 24, "512MB RAM | 3 CORES | NO-LAG | TAB Complete", 0x70);
+  print_at(2, 24, "512MB RAM | 3 CORES | ZERO-LAG | TAB Complete", 0x70);
   while (1) {
     set_color(10, 1);
     print("\nroot@tarkos");
@@ -465,7 +511,7 @@ void shell_loop() {
           put_char(c);
         }
       }
-      for (volatile int d = 0; d < 100000; d++)
+      for (volatile int d = 0; d < 80000; d++)
         ;
     }
     if (pos > 0) {
