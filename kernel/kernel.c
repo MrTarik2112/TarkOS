@@ -1,6 +1,6 @@
 /**
- * TarkOS v1.4 - Professional UI & TrEdit Edition
- * Features: Professional UI, Window Shadows, TrEdit (Built-in Editor)
+ * TarkOS v1.4.1 - Stability & UI Update
+ * Professional UI, TrEdit, and Optimized Boot
  */
 
 /* ============= HEADERS & TYPES ============= */
@@ -13,7 +13,7 @@ typedef int bool;
 #define false 0
 #define NULL ((void *)0)
 
-/* ============= VGA DRIVER & UI HELPERS ============= */
+/* ============= VGA DRIVER & BASIC UI ============= */
 #define VGA_ADDR 0xB8000
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -22,6 +22,18 @@ static uint16_t cur_x = 0, cur_y = 0;
 static uint8_t cur_col = 0x1F;
 
 void set_color(uint8_t fg, uint8_t bg) { cur_col = (bg << 4) | (fg & 0x0F); }
+
+void put_char_raw(char c, uint8_t col, int x, int y) {
+  if (x >= 0 && x < VGA_WIDTH && y >= 0 && y < VGA_HEIGHT)
+    vga[y * VGA_WIDTH + x] = (uint16_t)c | ((uint16_t)col << 8);
+}
+
+void clear_screen() {
+  for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
+    vga[i] = (cur_col << 8) | ' ';
+  cur_x = 0;
+  cur_y = 0;
+}
 
 void update_cursor() {
   uint16_t pos = cur_y * VGA_WIDTH + cur_x;
@@ -42,11 +54,6 @@ void scroll() {
        i++)
     vga[i] = (cur_col << 8) | ' ';
   cur_y = VGA_HEIGHT - 2;
-}
-
-void put_char_raw(char c, uint8_t col, int x, int y) {
-  if (x >= 0 && x < VGA_WIDTH && y >= 0 && y < VGA_HEIGHT)
-    vga[y * VGA_WIDTH + x] = (uint16_t)c | ((uint16_t)col << 8);
 }
 
 void put_char(char c) {
@@ -96,14 +103,10 @@ void draw_rect(int x, int y, int w, int h, uint8_t col) {
 }
 
 void draw_window(int x, int y, int w, int h, const char *title, uint8_t bg) {
-  // Shadow
-  draw_rect(x + 1, y + 1, w, h, 0x08);
-  // Body
-  draw_rect(x, y, w, h, bg);
-  // Title bar
-  draw_rect(x, y, w, 1, 0x3F);
-  int title_x = x + (w / 2 - strlen(title) / 2);
-  print_at(title_x > x ? title_x : x, y, title, 0x3F);
+  draw_rect(x + 1, y + 1, w, h, 0x08); // Shadow
+  draw_rect(x, y, w, h, bg);           // Body
+  draw_rect(x, y, w, 1, 0x3F);         // Title
+  print_at(x + 1, y, title, 0x3F);
 }
 
 /* ============= UTILS ============= */
@@ -131,12 +134,6 @@ void strcpy(char *d, const char *s) {
   while ((*d++ = *s++))
     ;
 }
-void strcat(char *d, const char *s) {
-  while (*d)
-    d++;
-  while ((*d++ = *s++))
-    ;
-}
 void *memset(void *s, int c, int n) {
   unsigned char *p = (unsigned char *)s;
   while (n--)
@@ -154,7 +151,6 @@ static inline void outb(uint16_t port, uint8_t v) {
   __asm__ volatile("outb %0, %1" : : "a"(v), "Nd"(port));
 }
 
-// RTC
 uint8_t get_rtc(int reg) {
   outb(0x70, reg);
   return inb(0x71);
@@ -209,7 +205,6 @@ void tredit(const char *filename) {
     print_at(2, 0, "TrEdit v1.0 - File: ", 0x70);
     print_at(22, 0, filename, 0x70);
     print_at(60, 0, "F10/ESC: Exit", 0x70);
-
     int line = 2, col = 2;
     for (int i = 0; i < pos; i++) {
       if (edit_buffer[i] == '\n') {
@@ -220,7 +215,6 @@ void tredit(const char *filename) {
       }
     }
     put_char_raw('_', 0x1E, col, line);
-
     while (1) {
       uint8_t sc = get_scancode();
       if (!sc)
@@ -248,7 +242,7 @@ void tredit(const char *filename) {
           break;
         }
       }
-      for (volatile int d = 0; d < 100000; d++)
+      for (volatile int d = 0; d < 50000; d++)
         ;
     }
   }
@@ -257,10 +251,10 @@ void tredit(const char *filename) {
 /* ============= SHELL & UI ============= */
 void draw_ui() {
   draw_rect(0, 0, 80, 1, 0x3F);
-  print_at(2, 0, "TarkOS v1.4 Professional", 0x3F);
-  char tbuf[10];
-  get_time_str(tbuf);
-  print_at(72, 0, tbuf, 0x3F);
+  print_at(2, 0, "TarkOS v1.4.1", 0x3F);
+  char tb[10];
+  get_time_str(tb);
+  print_at(72, 0, tb, 0x3F);
   draw_rect(0, 24, 80, 1, 0x70);
   print_at(2, 24, "tredit: edit | ls: list | cls: clear | help", 0x70);
 }
@@ -279,12 +273,11 @@ void shell_loop() {
     memset(line, 0, 64);
     while (1) {
       uint8_t sc = get_scancode();
-      static uint32_t timer = 0;
-      if (++timer > 1000000) {
+      static uint32_t t = 0;
+      if (++t > 1000000) {
         draw_ui();
-        timer = 0;
+        t = 0;
       }
-
       if (!sc)
         continue;
       if (sc == 0x2A || sc == 0x36) {
@@ -297,7 +290,6 @@ void shell_loop() {
       }
       if (sc & 0x80)
         continue;
-
       char c = scancode_to_char(sc, shift);
       if (c == '\n') {
         put_char('\n');
@@ -311,15 +303,14 @@ void shell_loop() {
         line[pos++] = c;
         put_char(c);
       }
-      for (volatile int d = 0; d < 100000; d++)
+      for (volatile int d = 0; d < 50000; d++)
         ;
     }
     if (pos == 0)
       continue;
     line[pos] = 0;
-
     if (strcmp(line, "help") == 0)
-      print("Commands: tredit, ls, cls, ver, info, reboot\n");
+      print("Available: tredit, ls, cls, ver, info, reboot\n");
     else if (strcmp(line, "ls") == 0)
       print("bin  readme.txt  kernel.bin\n");
     else if (strcmp(line, "cls") == 0) {
@@ -336,18 +327,17 @@ void shell_loop() {
   }
 }
 
-/* ============= KERNEL MAIN ============= */
+/* ============= MAIN ============= */
 void kmain() {
+  set_color(15, 1);
   clear_screen();
-  draw_rect(0, 0, 80, 25, 0x1F);
-  // Instant boot attempt to fix "loading loop"
   draw_window(20, 10, 40, 5, " System Init ", 0x7F);
   print_at(22, 12, "Starting TarkSH...", 0x7F);
   for (volatile int i = 0; i < 1000000; i++)
-    ; // Very short delay
+    ;
 
-  draw_rect(0, 0, 80, 25, 0x1F);
-  cur_x = 0;
+  clear_screen();
+  update_cursor();
   cur_y = 1;
   shell_loop();
 }
