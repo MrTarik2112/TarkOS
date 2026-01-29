@@ -514,8 +514,8 @@ void shell_loop() {
 void kmain() {
   clear_screen();
   print_at(30, 0, "[ TarkOS v1.3 Unix Edition ]", 14, 3);
-  cursor_y = 2;
-  cursor_x = 0;
+  cur_y = 2;
+  cur_x = 0;
   print("Welcome to the most expanded hobby OS!\nType 'help' to see 50+ "
         "commands.\n\n");
   shell_loop();
