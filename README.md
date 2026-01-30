@@ -1,51 +1,123 @@
-# TarkOS v0.4 - Quick Start Guide
+# TarkOS v1.9.6 - Eternal Edition
 
-## 🚀 Run It
+32-bit hobby operating system written in C and x86 assembly. Features a graphical shell, file system, keyboard/mouse support, and games.
 
+## Quick Start
+
+### Prerequisites
+- WSL (Windows Subsystem for Linux) with build tools
+- QEMU emulator
+- Cross-compiler (`i686-elf-gcc`)
+
+### Build & Run
 ```bash
-wsl make run
+# Complete setup (first time)
+chmod +x scripts/build_cross.sh
+./scripts/build_cross.sh
+echo 'export PATH="$HOME/opt/cross/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Build
+make clean
+make
+
+# Run
+make run
 ```
 
-## 📂 File System Commands
+## Features
 
-```bash
-ls              # List all files
-cat readme.txt  # View file content
-edit myfile.txt # Create/edit file (Ctrl-S save, Ctrl-Q quit)
-rm myfile.txt   # Delete file
+### Core
+- **Bootloader**: Multiboot-compliant GRUB boot
+- **Memory**: PMM (Physical Memory Manager), Paging support
+- **Interrupts**: GDT, IDT, ISR, PIC (Programmable Interrupt Controller)
+- **VGA Driver**: 80x25 text mode with 16 colors
+
+### Drivers
+- **Keyboard**: PS/2 keyboard input with Shift support
+- **Mouse**: PS/2 mouse with cursor tracking
+- **Timer**: System timer and RTC (Real-Time Clock)
+
+### GUI
+- **Shell**: Command-line interface with persistent history
+- **Window Manager**: Windowed UI with borders and shadows
+- **Font Renderer**: Bitmap font rendering
+- **Graphics**: Rectangle drawing and primitive UI elements
+
+### File System
+- **RAM Disk**: 16 files, 1KB each (in-memory)
+- **Commands**: `ls`, `cat`, `rm`, `edit`, `history`, `clear`, `reboot`, `top`
+
+### Applications
+- **Text Editor**: Full-screen editor (Ctrl-S save, Ctrl-Q quit)
+- **Snake Game**: Classic arcade game (WASD move, Q quit)
+- **Number Game**: Guessing game
+- **System Monitor**: Live uptime and resource display
+
+## Commands
+
+```
+# File System
+ls              List all files
+cat FILE        Show file content
+edit FILE       Create/edit file
+rm FILE         Delete file
+clear           Clear screen
+
+# System
+history         Show command history
+top             System monitor
+reboot          Restart OS
+help            Show available commands
 ```
 
-## 🎮 Games
+## Architecture
 
-```bash
-snake  # Snake game (WASD to move, Q to quit)
-game   # Number guessing game
+```
+kernel/
+  kernel.c          Main kernel entry
+  arch/i386/        x86-specific code (GDT, IDT, ISR, PIC)
+  drivers/          Keyboard, mouse, timer drivers
+  gui/              VGA, graphics, window manager, font renderer
+  mm/               Memory management (PMM, paging)
+  lib/              printf, string utilities
+
+boot/               Multiboot bootloader (NASM assembly)
+include/            Public headers
+iso/                GRUB ISO configuration
 ```
 
-## 📊 System
+## Development
 
-```bash
-top      # System monitor
-history  # Command history
-clear    # Clear screen
-reboot   # Restart
-```
+### Building
+- `make` - Build TarkOS.iso
+- `make clean` - Clean build artifacts
+- `make run` - Run in QEMU with GTK/SDL display
 
-## 🎨 Features
+### Cross-Compiler
+Uses `i686-elf-gcc` for bare-metal i386 compilation:
+- 32-bit Intel 80386 architecture
+- No OS dependencies (freestanding environment)
+- Custom linker script for memory layout
 
-- **RAM Disk**: 16 files, 1KB each
-- **Text Editor**: Full-screen, save/load
-- **Snake Game**: Classic with scoring
-- **16 Colors**: Customizable theme
-- **Uptime Counter**: Live clock
+### System Specifications
+- **Memory**: 512MB QEMU (configurable)
+- **Cores**: 3-core SMP support
+- **Resolution**: 80x25 text mode
+- **Color Depth**: 4-bit (16 colors)
 
-## 💡 Tips
+## Notes
 
-- Files persist in RAM only (lost on reboot)
-- Shift key works for capitals
-- Tab completes to 4 spaces
-- Screen auto-scrolls
+- Files persist only in RAM (lost on reboot)
+- Shift key enables uppercase characters
+- Tab auto-completes to 4 spaces
+- Screen auto-scrolls when full
+- Mouse cursor visible in GUI
+
+## License
+
+MIT License - See LICENSE file
 
 ---
 
-*TarkOS v0.4 - A feature-rich hobby OS*
+**TarkOS v1.9.6** | 18.0s Hyper-Cinematic Boot | Eternal Edition
