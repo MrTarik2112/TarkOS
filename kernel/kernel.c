@@ -119,8 +119,42 @@ void draw_rect(int x, int y, int w, int h, uint8_t col) {
 }
 
 void draw_window(int x, int y, int w, int h, const char *title, uint8_t col) {
-  draw_rect(x + 1, y + 1, w, h, col_shadow);
+  uint8_t col_light = (col & 0xF0) | (col_accent & 0x0F);
+  uint8_t dark_fg = col_shadow ? (col_shadow & 0x0F) : (col & 0x0F);
+  uint8_t col_dark = (col & 0xF0) | dark_fg;
+  if (col_shadow) {
+    int sx = x + w;
+    int sy = y + h;
+    if (sx < VGA_WIDTH) {
+      int sw = (sx + 1 < VGA_WIDTH) ? 2 : 1;
+      draw_rect(sx, y + 1, sw, h, col_shadow);
+    }
+    if (sy < VGA_HEIGHT) {
+      int sh = (sy + 1 < VGA_HEIGHT) ? 2 : 1;
+      draw_rect(x + 1, sy, w, sh, col_shadow);
+    }
+    if (sx < VGA_WIDTH && sy < VGA_HEIGHT)
+      put_char_raw(' ', col_shadow, sx, sy);
+  }
   draw_rect(x, y, w, h, col);
+  if (w > 2 && h > 2)
+    draw_rect(x + 1, y + 1, w - 2, h - 2, col);
+  if (w > 4)
+    draw_rect(x + 2, y + 1, w - 4, 1, col_light);
+  if (w > 4 && h > 4) {
+    for (int i = x + 1; i < x + w - 1; i++) {
+      put_char_raw(196, col_light, i, y + 1);
+      put_char_raw(196, col_dark, i, y + h - 2);
+    }
+    for (int i = y + 1; i < y + h - 1; i++) {
+      put_char_raw(179, col_light, x + 1, i);
+      put_char_raw(179, col_dark, x + w - 2, i);
+    }
+    put_char_raw(218, col_light, x + 1, y + 1);
+    put_char_raw(191, col_light, x + w - 2, y + 1);
+    put_char_raw(192, col_dark, x + 1, y + h - 2);
+    put_char_raw(217, col_dark, x + w - 2, y + h - 2);
+  }
   for (int i = x; i < x + w; i++) {
     put_char_raw(205, col, i, y);
     put_char_raw(205, col, i, y + h - 1);
