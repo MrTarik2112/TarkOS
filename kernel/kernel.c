@@ -103,6 +103,10 @@ void put_char_raw(char c, uint8_t col, int x, int y) {
 }
 
 void update_cursor(int x, int y) {
+  if (x < 0) x = 0;
+  if (y < 0) y = 0;
+  if (x >= VGA_WIDTH) x = VGA_WIDTH - 1;
+  if (y >= VGA_HEIGHT) y = VGA_HEIGHT - 1;
   uint16_t pos = y * VGA_WIDTH + x;
   outb(0x3D4, 0x0F);
   outb(0x3D5, (uint8_t)(pos & 0xFF));
@@ -111,9 +115,19 @@ void update_cursor(int x, int y) {
 }
 
 void draw_rect(int x, int y, int w, int h, uint8_t col) {
+  if (w <= 0 || h <= 0)
+    return;
+  int x1 = x < 0 ? 0 : x;
+  int y1 = y < 0 ? 0 : y;
+  int x2 = x + w;
+  int y2 = y + h;
+  if (x2 > VGA_WIDTH) x2 = VGA_WIDTH;
+  if (y2 > VGA_HEIGHT) y2 = VGA_HEIGHT;
+  if (x1 >= x2 || y1 >= y2)
+    return;
   uint16_t entry = (uint16_t)' ' | ((uint16_t)col << 8);
-  for (int i = y; i < y + h; i++)
-    for (int j = x; j < x + w; j++)
+  for (int i = y1; i < y2; i++)
+    for (int j = x1; j < x2; j++)
       if (vga[i * VGA_WIDTH + j] != entry)
         vga[i * VGA_WIDTH + j] = entry;
 }
