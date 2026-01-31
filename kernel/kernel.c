@@ -65,6 +65,11 @@ int fs_rmdir(const char *path);
 void ls_dir_path(const char *path);
 int is_space(char c);
 int count_words(const char *s);
+int count_lines(const char *s);
+int fs_used_files();
+int fs_used_bytes();
+const char *command_desc(const char *cmd);
+int command_runs_without_args(const char *cmd);
 
 /* ============= VGA DRIVER v10.0 (ETERNAL) ============= */
 #define VGA_ADDR 0xB8000
@@ -140,7 +145,7 @@ void draw_shell_static() {
 
   // Bottom Footer
   draw_rect(0, 24, 80, 1, col_footer);
-  print_at(2, 24, " HELP | LS | CD | MKDIR | TREDIT | PONG | SYSINFO | v1.9.6",
+  print_at(2, 24, " HELP | LS | CD | MKDIR | DF | WC | ABOUT | SYSINFO | v1.9.6",
            col_footer);
 }
 
@@ -480,6 +485,141 @@ int count_words(const char *s) {
     s++;
   }
   return count;
+}
+
+int count_lines(const char *s) {
+  if (!s || !*s)
+    return 0;
+  int lines = 0;
+  const char *p = s;
+  while (*p) {
+    if (*p == '\n')
+      lines++;
+    p++;
+  }
+  if (p > s && *(p - 1) != '\n')
+    lines++;
+  return lines;
+}
+
+int fs_used_files() {
+  int used = 0;
+  for (int i = 0; i < MAX_FILES; i++)
+    if (fs_table[i].used)
+      used++;
+  return used;
+}
+
+int fs_used_bytes() {
+  int total = 0;
+  for (int i = 0; i < MAX_FILES; i++)
+    if (fs_table[i].used)
+      total += fs_table[i].size;
+  return total;
+}
+
+const char *command_desc(const char *cmd) {
+  if (strcmp(cmd, "help") == 0)
+    return "help: Kullanilabilir komutlarin listesini gosterir.";
+  if (strcmp(cmd, "sysinfo") == 0)
+    return "sysinfo: Kernel ve sistem ozeti bilgilerini gosterir.";
+  if (strcmp(cmd, "cpuinfo") == 0)
+    return "cpuinfo: CPU uyumlulugu bilgisini gosterir.";
+  if (strcmp(cmd, "calc") == 0)
+    return "calc: Basit aritmetik ifade hesaplar.";
+  if (strcmp(cmd, "themes") == 0)
+    return "themes: Tema degistirir (dark|neon|classic).";
+  if (strcmp(cmd, "echo") == 0)
+    return "echo: Girilen metni ekrana yazar.";
+  if (strcmp(cmd, "date") == 0)
+    return "date: Tarih ve saat bilgisini gosterir.";
+  if (strcmp(cmd, "time") == 0)
+    return "time: Sistem saatini gosterir.";
+  if (strcmp(cmd, "matrix") == 0)
+    return "matrix: Matrix efektini calistirir.";
+  if (strcmp(cmd, "ls") == 0 || strcmp(cmd, "dir") == 0)
+    return "ls: Dizin icerigini listeler.";
+  if (strcmp(cmd, "pwd") == 0)
+    return "pwd: Mevcut dizin yolunu gosterir.";
+  if (strcmp(cmd, "cd") == 0)
+    return "cd: Dizin degistirir.";
+  if (strcmp(cmd, "mkdir") == 0)
+    return "mkdir: Yeni dizin olusturur.";
+  if (strcmp(cmd, "rmdir") == 0)
+    return "rmdir: Dizin ve icindeki girdileri siler.";
+  if (strcmp(cmd, "cat") == 0)
+    return "cat: Dosya icerigini gosterir.";
+  if (strcmp(cmd, "cp") == 0)
+    return "cp: Dosya kopyalar.";
+  if (strcmp(cmd, "mv") == 0)
+    return "mv: Dosya tasir veya adini degistirir.";
+  if (strcmp(cmd, "touch") == 0)
+    return "touch: Bos dosya olusturur.";
+  if (strcmp(cmd, "write") == 0)
+    return "write: Dosyaya yazar (ustune yazar).";
+  if (strcmp(cmd, "append") == 0)
+    return "append: Dosyaya ekleme yapar.";
+  if (strcmp(cmd, "stat") == 0)
+    return "stat: Dosya boyutu bilgisini gosterir.";
+  if (strcmp(cmd, "find") == 0)
+    return "find: Dosya adinda metin arar.";
+  if (strcmp(cmd, "history") == 0)
+    return "history: Komut gecmisini listeler.";
+  if (strcmp(cmd, "rm") == 0)
+    return "rm: Dosya siler.";
+  if (strcmp(cmd, "tredit") == 0)
+    return "tredit: Metin duzenleyicisini acar.";
+  if (strcmp(cmd, "cls") == 0 || strcmp(cmd, "clear") == 0)
+    return "clear: Ekrani temizler.";
+  if (strcmp(cmd, "reboot") == 0)
+    return "reboot: Sistemi yeniden baslatir.";
+  if (strcmp(cmd, "ver") == 0)
+    return "ver: Surum bilgisini gosterir.";
+  if (strcmp(cmd, "pong") == 0)
+    return "pong: Pong oyununu baslatir.";
+  if (strcmp(cmd, "about") == 0)
+    return "about: TarkOS hakkinda kisa bilgi verir.";
+  if (strcmp(cmd, "df") == 0)
+    return "df: RAMDisk kullanimini gosterir.";
+  if (strcmp(cmd, "wc") == 0)
+    return "wc: Dosya satir/kelime/byte sayar.";
+  return 0;
+}
+
+int command_runs_without_args(const char *cmd) {
+  if (strcmp(cmd, "help") == 0)
+    return 1;
+  if (strcmp(cmd, "sysinfo") == 0)
+    return 1;
+  if (strcmp(cmd, "cpuinfo") == 0)
+    return 1;
+  if (strcmp(cmd, "date") == 0)
+    return 1;
+  if (strcmp(cmd, "time") == 0)
+    return 1;
+  if (strcmp(cmd, "matrix") == 0)
+    return 1;
+  if (strcmp(cmd, "ls") == 0 || strcmp(cmd, "dir") == 0)
+    return 1;
+  if (strcmp(cmd, "pwd") == 0)
+    return 1;
+  if (strcmp(cmd, "cd") == 0)
+    return 1;
+  if (strcmp(cmd, "history") == 0)
+    return 1;
+  if (strcmp(cmd, "cls") == 0 || strcmp(cmd, "clear") == 0)
+    return 1;
+  if (strcmp(cmd, "reboot") == 0)
+    return 1;
+  if (strcmp(cmd, "ver") == 0)
+    return 1;
+  if (strcmp(cmd, "pong") == 0)
+    return 1;
+  if (strcmp(cmd, "about") == 0)
+    return 1;
+  if (strcmp(cmd, "df") == 0)
+    return 1;
+  return 0;
 }
 
 int fs_dir_exists(const char *path) {
@@ -1099,6 +1239,16 @@ void shell_loop() {
       if (argc == 0)
         continue;
 
+      if (argc == 1) {
+        const char *desc = command_desc(argv[0]);
+        if (desc) {
+          print(desc);
+          print("\n");
+          if (!command_runs_without_args(argv[0]))
+            continue;
+        }
+      }
+
       if (strcmp(argv[0], "help") == 0) {
         set_color(col_accent, col_bg >> 4);
         print("\nTARKOS NOVA ULTIMATE - CONSOLE ASSISTANCE\n");
@@ -1107,7 +1257,8 @@ void shell_loop() {
               "append, stat, find\n");
         print("- App: tredit, cls, ver, reboot, time, date, echo, matrix, "
               "cpuinfo, calc, themes, sysinfo, pong, history\n");
-        print("- UI: 18s Cinematic Boot [Enabled]\n");
+        print("- Info: about, df, wc\n");
+        print("- UI: 9.4s Hyper Boot [Enabled]\n");
       } else if (strcmp(argv[0], "sysinfo") == 0) {
         print("TarkOS Nova v1.9.6 [Eternal Edition]\n");
         print("Build: 2026-01-30.01\n");
@@ -1115,6 +1266,59 @@ void shell_loop() {
         print("Memory Manager: PMM + Paging [Active]\n");
         print("CPU: Multiboot Detected 3-Core SMP\n");
         print("GUI: Zero-Flicker Dual-Bar [Stable]\n");
+      } else if (strcmp(argv[0], "about") == 0) {
+        print("TarkOS Nova v1.9.6 Ultimate\n");
+        print("Hyper Boot: 9.4s | SMP x3 | RAM 512MB\n");
+        print("VFS: RAMDisk | Shell: Nova Console v3.7\n");
+        print("Themes: dark, neon, classic\n");
+      } else if (strcmp(argv[0], "df") == 0) {
+        int used_files = fs_used_files();
+        int used_bytes = fs_used_bytes();
+        int total_files = MAX_FILES;
+        int total_bytes = MAX_FILES * (MAX_FILE_SIZE - 1);
+        char buf[16];
+        print("Files: ");
+        itoa(used_files, buf);
+        print(buf);
+        print("/");
+        itoa(total_files, buf);
+        print(buf);
+        print("\nData: ");
+        itoa(used_bytes, buf);
+        print(buf);
+        print("/");
+        itoa(total_bytes, buf);
+        print(buf);
+        print(" bytes\n");
+      } else if (strcmp(argv[0], "wc") == 0) {
+        if (argc < 2) {
+          print("Usage: wc <filename>\n");
+        } else {
+          char path[64];
+          if (!build_path(argv[1], path)) {
+            print("Error: Invalid path.\n");
+          } else {
+            int id = fs_find_file(path);
+            if (id != -1) {
+              int lines = count_lines(fs_table[id].data);
+              int words = count_words(fs_table[id].data);
+              int bytes = fs_table[id].size;
+              char buf[16];
+              print("Lines: ");
+              itoa(lines, buf);
+              print(buf);
+              print("  Words: ");
+              itoa(words, buf);
+              print(buf);
+              print("  Bytes: ");
+              itoa(bytes, buf);
+              print(buf);
+              print("\n");
+            } else {
+              print("Error: File not found.\n");
+            }
+          }
+        }
       } else if (strcmp(argv[0], "cpuinfo") == 0) {
         uint32_t a, d;
         cpuid(0, &a, &d);
@@ -1404,43 +1608,46 @@ void shell_loop() {
 }
 
 /* ============= KERNEL MAIN ============= */
-// Eternal Nova Boot Sequence (Exactly 18.0s)
+// Eternal Nova Boot Sequence (9.4s)
 void hyper_cinematic_nova_eternal_boot() {
   clear_screen();
-  // Enhanced High-Fidelity ASCII Art
-  draw_window(5, 2, 70, 21, " TARKOS NOVA - ETERNAL INITIALIZATION ", col_bg);
+  draw_window(5, 2, 70, 21, " TARKOS NOVA | HYPER BOOT 9.4s ", col_bg);
 
   set_color(0x1B, col_bg >> 4);
-  print_at(12, 5, " _____   _    ____  _  _  _____  ____   ____ ", 0x1B);
-  print_at(12, 6, "|_   _| / \\  |  _ \\| |/ /| ____|/ ___| / ___|", 0x1B);
-  print_at(12, 7, "  | |  / _ \\ | |_) | ' / |  _|  \\___ \\ \\___ \\", 0x1B);
-  print_at(12, 8, "  | | / ___ \\|  _ <| . \\ | |___  ___) | ___) |", 0x1B);
-  print_at(12, 9, "  |_|/_/   \\_\\_| \\_\\_|\\_\\|_____||____/ |____/ ", 0x1B);
+  print_at(10, 4, "====================== NOVA CORE ======================", 0x1B);
+  print_at(10, 6, " _____   _    ____  _  _  _____  ____   ____ ", 0x1B);
+  print_at(10, 7, "|_   _| / \\  |  _ \\| |/ /| ____|/ ___| / ___|", 0x1B);
+  print_at(10, 8, "  | |  / _ \\ | |_) | ' / |  _|  \\___ \\ \\___ \\", 0x1B);
+  print_at(10, 9, "  | | / ___ \\|  _ <| . \\ | |___  ___) | ___) |", 0x1B);
+  print_at(10, 10, "  |_|/_/   \\_\\_| \\_\\_|\\_\\|_____||____/ |____/ ", 0x1B);
 
-  print_at(12, 11, " _   _  _____ __     __  _      ", 0x1B);
-  print_at(12, 12, "| \\ | |/ _ \\ \\ \\   / / / \\     ", 0x1B);
-  print_at(12, 13, "|  \\| | | | | \\ \\ / / / _ \\    ", 0x1B);
-  print_at(12, 14, "| |\\  | |_| |  \\ V / / ___ \\   ", 0x1B);
-  print_at(12, 15, "|_| \\_|\\___/    \\_/ /_/   \\_\\  ", 0x1B);
-
-  print_at(22, 17, ">>> NOVA ETERNAL KERNEL v1.9.6 ULTIMATE <<<", col_accent);
+  print_at(12, 12, "NOVA ETERNAL KERNEL v1.9.6 ULTIMATE", col_accent);
+  print_at(12, 13, "SMP x3  |  RAM 512MB  |  VFS RAMDisk  |  VGA TUI", col_success);
+  print_at(12, 14, "Boot Target: 9.4s  |  Secure Init  |  Stable", col_success);
 
   const char *phases[] = {
-      "[ SMP    ] Calibrating 3-Phase Multi-Core Vectors...",
-      "[ MEMORY ] Mapping 512MB High-Integrity RAM Pages...",
-      "[ VFS    ] Mounting Eternal RAMDisk Filesystem...",
-      "[ TUI    ] Initializing Dual-Bar Zero-Flicker GUI...",
-      "[ SYSTEM ] Enumerating Protected Mode IRQ Tables...",
-      "[ SHELL  ] Spawning Professional Console Context..."};
+      "[ CORE   ] Multi-Core Vector Alignment...",
+      "[ MEMORY ] High-Integrity Page Map Build...",
+      "[ VFS    ] RAMDisk Index and Metadata...",
+      "[ TUI    ] Dual-Bar Zero-Flicker Renderer...",
+      "[ IO     ] Interrupt and Device Sync...",
+      "[ SHELL  ] Professional Console Context..."};
 
-  delay_ms(500); // Grand Intro
+  const char spin[] = "|/-\\";
+  int spin_idx = 0;
+
+  delay_ms(400);
   for (int p = 0; p < 6; p++) {
-    print_at(15, 19, "                                            ", col_bg);
-    print_at(20, 19, phases[p], col_success);
+    print_at(12, 17, "                                                      ", col_bg);
+    print_at(12, 17, phases[p], col_success);
     for (int i = 0; i < 11; i++) {
-      // High-density progress grow
+      char s[2];
+      s[0] = spin[spin_idx & 3];
+      s[1] = 0;
+      print_at(62, 17, s, col_accent);
       put_char_raw(219, 0x0B, 8 + p * 11 + i, 21);
-      delay_ms(270); // Perfectly calibrated for 18s Cinematic Experience
+      spin_idx++;
+      delay_ms(136);
     }
   }
 }
